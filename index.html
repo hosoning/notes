@@ -1,112 +1,122 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>备忘录</title>
-    <link rel="manifest" href="manifest.json" />
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Notes</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="備忘錄">
+  <!-- 引入 html2canvas 用於導出長圖 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
-    <div id="app">
+  <!-- 1. 清單頁面 (List View) -->
+  <div id="list-view" class="view active">
+    <header class="ios-header">
+      <div class="header-top">
+        <span class="back-btn-placeholder"></span>
+        <span class="header-title">備忘錄</span>
+        <button id="import-export-btn" class="ios-icon-btn">⚙️</button>
+      </div>
+      <div class="search-bar-container">
+        <input type="text" id="search-input" placeholder="搜尋">
+      </div>
+    </header>
 
-        <!-- ===== 列表视图 ===== -->
-        <div id="listView" class="view active">
-            <div class="status-bar"></div>
-            <div class="header">
-                <h1>備忘錄</h1>
-                <div class="header-actions">
-                    <button id="btnNewNote" aria-label="新增備忘錄">
-                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="search-bar">
-                <input id="searchInput" type="text" placeholder="搜尋" />
-            </div>
-            <div class="note-list" id="noteList"></div>
-        </div>
+    <main class="note-list-container">
+      <div class="folder-title">所有備忘錄</div>
+      <div id="notes-list" class="ios-list">
+        <!-- 備忘錄列表項目會由 JS 動態生成 -->
+      </div>
+    </main>
 
-        <!-- ===== 编辑器视图 ===== -->
-        <div id="editorView" class="view slide-in">
-            <div class="status-bar"></div>
-            <div class="editor-header">
-                <button class="back-btn" id="btnBack">
-                    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    返回
-                </button>
-                <div class="actions">
-                    <button id="btnInsertImage" aria-label="插入圖片">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                    </button>
-                    <button id="btnExportImage" aria-label="匯出長圖">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    </button>
-                    <button id="btnDeleteNote" aria-label="刪除">
-                        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </button>
-                </div>
-            </div>
+    <footer class="ios-footer">
+      <span id="note-count">0 個備忘錄</span>
+      <button id="new-note-btn" class="ios-icon-btn">📝</button>
+    </footer>
+  </div>
 
-            <div class="editor-scroll" id="editorScroll">
-                <input class="editor-title" id="editorTitle" placeholder="標題" />
-                <input class="editor-sub" id="editorSub" placeholder="副標題" />
-                <div class="editor-body" id="editorBody" contenteditable="true"></div>
-            </div>
+  <!-- 2. 編輯頁面 (Editor View) -->
+  <div id="editor-view" class="view">
+    <header class="ios-header-editor">
+      <button id="back-to-list" class="ios-back-btn">
+        <span class="chevron"></span> 備忘錄
+      </button>
+      <div class="editor-actions">
+        <button id="share-btn" class="ios-icon-btn">📤</button>
+        <button id="format-btn" class="ios-icon-btn">Aa</button>
+        <button id="insert-img-btn" class="ios-icon-btn">📷</button>
+        <input type="file" id="image-loader" accept="image/*" style="display: none;">
+        <button id="delete-note-btn" class="ios-icon-btn trash">🗑️</button>
+      </div>
+    </header>
 
-            <!-- 格式工具栏 -->
-            <div class="format-toolbar" id="formatToolbar">
-                <div class="group">
-                    <button data-cmd="bold" title="粗體"><svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
-                    <button data-cmd="italic" title="斜體"><svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
-                    <button data-cmd="underline" title="底線"><svg viewBox="0 0 24 24"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>
-                    <button data-cmd="strikeThrough" title="刪除線"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><path d="M16 6.5A4 4 0 0 0 12 4a4 4 0 0 0-4 4c0 2 1.5 3.5 4 4"/><path d="M8 17.5A4 4 0 0 0 12 20a4 4 0 0 0 4-4c0-2-1.5-3.5-4-4"/></svg></button>
-                </div>
-                <div class="divider"></div>
-                <div class="group">
-                    <button data-cmd="formatBlock" data-value="h1" title="標題1">H1</button>
-                    <button data-cmd="formatBlock" data-value="h2" title="標題2">H2</button>
-                    <button data-cmd="formatBlock" data-value="h3" title="標題3">H3</button>
-                </div>
-                <div class="divider"></div>
-                <div class="group">
-                    <button data-cmd="insertUnorderedList" title="項目符號"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
-                    <button data-cmd="insertOrderedList" title="編號"><svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
-                    <button data-cmd="formatBlock" data-value="blockquote" title="引用"><svg viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.5-2-3-1.244-.5-3.5-.5-4 0-.5.5-.5 2 0 3 1 0 2.5-.5 3 1v9c0 5-2 6-4 6z"/><path d="M14 21c3 0 7-1 7-8V5c0-1.25-.756-2.5-2-3-1.244-.5-3.5-.5-4 0-.5.5-.5 2 0 3 1 0 2.5-.5 3 1v9c0 5-2 6-4 6z"/></svg></button>
-                </div>
-                <div class="divider"></div>
-                <div class="group">
-                    <button data-cmd="removeFormat" title="清除格式"><svg viewBox="0 0 24 24"><path d="M12.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7.5-7z"/><path d="M12 2v7h7"/><path d="m9 14 6 4"/><path d="m15 14-6 4"/></svg></button>
-                    <div class="color-picker-wrap">
-                        <input type="color" id="textColorPicker" value="#1c1c1e" title="文字顏色" />
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- 編輯區域 (導出長圖時會擷取此區塊) -->
+    <main id="note-editor-container" class="editor-container">
+      <div class="note-date" id="note-timestamp">2026年7月16日 19:57</div>
+      <div id="editor" contenteditable="true" placeholder="開始輸入..."></div>
+    </main>
+  </div>
 
-        <!-- ===== 模态框 ===== -->
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal-box">
-                <h3 id="modalTitle">匯出長圖</h3>
-                <p id="modalDesc">將這篇備忘錄匯出為一張長圖，分享或儲存。</p>
-                <div class="actions">
-                    <button class="btn-cancel" id="modalCancel">取消</button>
-                    <button class="btn-confirm" id="modalConfirm">確認匯出</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== Toast ===== -->
-        <div class="toast" id="toast"></div>
-
-        <!-- ===== 隐藏元素 ===== -->
-        <input type="file" id="imageInput" accept="image/*" multiple />
-        <div id="exportContainer"></div>
-
+  <!-- 3. iOS 格式化工具列 (Format Sheet) -->
+  <div id="format-sheet" class="ios-sheet">
+    <div class="sheet-header">
+      <h3>格式</h3>
+      <button id="close-format" class="close-btn">完成</button>
     </div>
+    <div class="format-options">
+      <button class="format-style-btn" data-command="formatBlock" data-value="h1">標題</button>
+      <button class="format-style-btn" data-command="formatBlock" data-value="h2">子標題</button>
+      <button class="format-style-btn" data-command="formatBlock" data-value="p">內文</button>
+      <hr class="sheet-divider">
+      <div class="inline-formats">
+        <button class="format-inline-btn" data-command="bold"><b>B</b></button>
+        <button class="format-inline-btn" data-command="italic"><i>I</i></button>
+        <button class="format-inline-btn" data-command="underline"><u>U</u></button>
+        <button class="format-inline-btn" data-command="strikeThrough"><s>S</s></button>
+      </div>
+    </div>
+  </div>
 
-    <script src="app.js"></script>
+  <!-- 4. iOS 導出/導入選單 (Settings Sheet) -->
+  <div id="settings-sheet" class="ios-sheet">
+    <div class="sheet-header">
+      <h3>備忘錄數據管理</h3>
+      <button id="close-settings" class="close-btn">完成</button>
+    </div>
+    <div class="settings-options">
+      <button id="export-data-btn" class="settings-action-btn">📤 導出備忘錄備份 (JSON)</button>
+      <button id="trigger-import-btn" class="settings-action-btn">📥 導入備忘錄備份 (JSON)</button>
+      <input type="file" id="import-file-input" accept=".json" style="display: none;">
+    </div>
+  </div>
+
+  <!-- 5. iOS 分享/導出長圖選單 (Share Sheet) -->
+  <div id="share-sheet" class="ios-sheet">
+    <div class="sheet-header">
+      <h3>分享備忘錄</h3>
+      <button id="close-share" class="close-btn">完成</button>
+    </div>
+    <div class="settings-options">
+      <button id="export-long-img-btn" class="settings-action-btn primary">🖼️ 導出長圖 (PNG)</button>
+    </div>
+  </div>
+
+  <!-- 背景遮罩 -->
+  <div id="overlay" class="ios-overlay"></div>
+
+  <script src="app.js"></script>
+  <script>
+    // 註冊 PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
