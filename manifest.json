@@ -1,16 +1,16 @@
 {
-    "name": "备忘录",
-    "short_name": "备忘录",
-    "description": "iOS 风格备忘录 PWA",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#ffd700",
-    "icons": [
-        {
-            "src": "icons/icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ]
+  "short_name": "Notes",
+  "name": "Notes",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/564/564445.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#000000",
+  "theme_color": "#1c1c1e",
+  "display": "standalone",
+  "orientation": "portrait"
 }
