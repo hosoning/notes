@@ -1,0 +1,16 @@
+{
+    "name": "备忘录",
+    "short_name": "备忘录",
+    "description": "iOS 风格备忘录 PWA",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffd700",
+    "icons": [
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
