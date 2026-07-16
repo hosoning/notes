@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>备忘录</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuWkh+W9seiIuSIsCiAgInNob3J0X25hbWUiOiAi5rGf5LqLIiwKICAiZGVzY3JpcHRpb24iOiAi56We6K6k55uu5b2p5a2Q5b2xIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmZmZmZmYiLAogICJ0aGVtZV9jb2xvciI6ICIjZmZkZjAwIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgNTEyIDUxMic+PHJlY3Qgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIHJ4PSc1MCcgZmlsbD0nI2ZmZGYwMCcvPjx0ZXh0IHg9JzI1NicgeT0nMzQwJyBmb250LXNpemU9JzI4MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnIGZvbnQtd2VpZ2h0PSdib2xkJyBmaWxsPScjMzMzJz7mk5w8L3RleHQ+PC9zdmc+IgogICAgfQogIF0KfQ==" />
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js">
+    </script>
+    <style>
+        /* ===== CSS Variables & Reset ===== */
+        :root {
+            --primary: #ffd700;
+            --primary-dark: #e6c200;
+            --bg: #f2f2f7;
+            --card-bg: #ffffff;
+            --text-primary: #1c1c1e;
+            --text-secondary: #3a3a3c;
+            --text-tertiary: #8e8e93;
+            --separator: #e5e5ea;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --radius: 14px;
+            --radius-sm: 10px;
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --header-height: 56px;
+            --toolbar-height: 52px;
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-tertiary);
+            border-radius: 8px;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-bar {
+            height: var(--safe-top);
+            flex-shrink: 0;
+            background: var(--bg);
+        }
+
+        .view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--bg);
+            transition: transform var(--transition), opacity var(--transition);
+            will-change: transform, opacity;
+            z-index: 1;
+        }
+        .view.active {
+            display: flex;
+            z-index: 2;
+        }
+        .view.slide-in {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        .view.slide-in.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .view.slide-out {
+            transform: translateX(-30%);
+            opacity: 0;
+        }
+
+        /* ===== List View ===== */
+        #listView {
+            z-index: 1;
+        }
+        #listView .header {
+            padding: 12px 20px 8px;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            padding-top: calc(12px + var(--safe-top));
+        }
+        #listView .header h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+        #listView .header-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        #listView .header-actions button {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: var(--text-secondary);
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #listView .header-actions button:active {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        #listView .header-actions button svg {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .search-bar {
+            padding: 8px 20px 12px;
+            flex-shrink: 0;
+            background: var(--bg);
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: #e5e5ea;
+            font-size: 16px;
+            font-family: var(--font);
+            color: var(--text-primary);
+            outline: none;
+            transition: background 0.2s;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 14px center;
+            background-size: 18px;
+        }
+        .search-bar input:focus {
+            background-color: #d1d1d6;
+        }
+        .search-bar input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .note-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 80px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .note-list .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-tertiary);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .note-list .empty .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        .note-item {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .note-item:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+        }
+        .note-item .color-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 8px;
+            background: var(--primary);
+        }
+        .note-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+        .note-item .info .title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .note-item .info .title:empty::before {
+            content: "無標題";
+            color: var(--text-tertiary);
+            font-weight: 400;
+        }
+        .note-item .info .preview {
+            font-size: 15px;
+            color: var(--text-tertiary);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+        .note-item .info .preview img {
+            display: inline-block;
+            max-height: 20px;
+            vertical-align: middle;
+            border-radius: 3px;
+            margin-right: 4px;
+        }
+        .note-item .info .meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+        .note-item .info .meta .date {
+            font-feature-settings: "tnum";
+        }
+        .note-item .info .meta .badge {
+            background: var(--primary);
+            color: #fff;
+            font-size: 10px;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .note-item .thumb {
+            flex-shrink: 0;
+            width: 52px;
+            height: 52px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #e5e5ea;
+            object-fit: cover;
+            margin-top: 2px;
+        }
+        .note-item .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* ===== Editor View ===== */
+        #editorView {
+            z-index: 3;
+            background: var(--bg);
+        }
+        #editorView .editor-header {
+            padding: 8px 12px 8px 8px;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            padding-top: calc(8px + var(--safe-top));
+            border-bottom: 1px solid var(--separator);
+        }
+        #editorView .editor-header .back-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #007aff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+            font-family: var(--font);
+            transition: background 0.15s;
+        }
+        #editorView .editor-header .back-btn:active {
+            background: rgba(0, 122, 255, 0.1);
+        }
+        #editorView .editor-header .back-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        #editorView .editor-header .actions {
+            display: flex;
+            gap: 2px;
+        }
+        #editorView .editor-header .actions button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #editorView .editor-header .actions button:active {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        #editorView .editor-header .actions button svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .editor-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 20px 120px;
+            -webkit-overflow-scrolling: touch;
+            background: var(--card-bg);
+            margin: 0 12px 12px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .editor-scroll .editor-title {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 28px;
+            font-weight: 700;
+            font-family: var(--font);
+            color: var(--text-primary);
+            padding: 4px 0 6px;
+            background: transparent;
+            letter-spacing: -0.3px;
+        }
+        .editor-scroll .editor-title::placeholder {
+            color: var(--text-tertiary);
+            font-weight: 400;
+        }
+        .editor-scroll .editor-sub {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 18px;
+            font-weight: 400;
+            font-family: var(--font);
+            color: var(--text-secondary);
+            padding: 2px 0 8px;
+            background: transparent;
+        }
+        .editor-scroll .editor-sub::placeholder {
+            color: var(--text-tertiary);
+        }
+        .editor-scroll .editor-body {
+            min-height: 200px;
+            outline: none;
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            padding: 6px 0;
+            font-family: var(--font);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .editor-scroll .editor-body:empty::before {
+            content: "輸入內容…";
+            color: var(--text-tertiary);
+        }
+        .editor-scroll .editor-body img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 8px 0;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        .editor-scroll .editor-body [style*="font-weight:700"],
+        .editor-scroll .editor-body strong,
+        .editor-scroll .editor-body b {
+            font-weight: 700;
+        }
+        .editor-scroll .editor-body [style*="font-style:italic"],
+        .editor-scroll .editor-body em,
+        .editor-scroll .editor-body i {
+            font-style: italic;
+        }
+        .editor-scroll .editor-body [style*="text-decoration:underline"],
+        .editor-scroll .editor-body u {
+            text-decoration: underline;
+        }
+        .editor-scroll .editor-body [style*="text-decoration:line-through"],
+        .editor-scroll .editor-body strike,
+        .editor-scroll .editor-body s {
+            text-decoration: line-through;
+        }
+        .editor-scroll .editor-body h1,
+        .editor-scroll .editor-body h2,
+        .editor-scroll .editor-body h3 {
+            font-weight: 700;
+            margin: 12px 0 6px;
+            line-height: 1.3;
+        }
+        .editor-scroll .editor-body h1 {
+            font-size: 26px;
+        }
+        .editor-scroll .editor-body h2 {
+            font-size: 22px;
+        }
+        .editor-scroll .editor-body h3 {
+            font-size: 19px;
+        }
+        .editor-scroll .editor-body ul,
+        .editor-scroll .editor-body ol {
+            padding-left: 24px;
+            margin: 6px 0;
+        }
+        .editor-scroll .editor-body li {
+            margin: 2px 0;
+        }
+        .editor-scroll .editor-body blockquote {
+            border-left: 4px solid var(--primary);
+            padding-left: 16px;
+            margin: 8px 0;
+            color: var(--text-secondary);
+        }
+        .editor-scroll .editor-body code {
+            background: #f2f2f7;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: "SF Mono", monospace;
+        }
+        .editor-scroll .editor-body pre {
+            background: #f2f2f7;
+            padding: 12px 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: "SF Mono", monospace;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+
+        /* ===== Format Toolbar ===== */
+        .format-toolbar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(242, 242, 247, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--separator);
+            padding: 6px 8px calc(6px + var(--safe-bottom));
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            z-index: 10;
+            -webkit-overflow-scrolling: touch;
+            justify-content: center;
+        }
+        .format-toolbar::-webkit-scrollbar {
+            display: none;
+        }
+        .format-toolbar .group {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            flex-shrink: 0;
+        }
+        .format-toolbar .divider {
+            width: 1px;
+            height: 28px;
+            background: var(--separator);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+        .format-toolbar button {
+            background: none;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font);
+            flex-shrink: 0;
+            position: relative;
+        }
+        .format-toolbar button:active {
+            background: rgba(0, 0, 0, 0.06);
+        }
+        .format-toolbar button.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        .format-toolbar button svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .format-toolbar .color-picker-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .format-toolbar .color-picker-wrap input[type="color"] {
+            width: 30px;
+            height: 30px;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            background: none;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        .format-toolbar .color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .format-toolbar .color-picker-wrap input[type="color"]::-webkit-color-swatch {
+            border: 2px solid var(--separator);
+            border-radius: 50%;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px 20px 20px;
+            max-width: 380px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: modalIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes modalIn {
+            from {
+                transform: scale(0.92) translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-box h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+        .modal-box p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+        .modal-box .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .modal-box .actions button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            font-weight: 500;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.15s;
+            flex: 1;
+        }
+        .modal-box .actions button:active {
+            transform: scale(0.97);
+        }
+        .modal-box .actions .btn-cancel {
+            background: #f2f2f7;
+            color: var(--text-secondary);
+        }
+        .modal-box .actions .btn-confirm {
+            background: var(--primary);
+            color: #1c1c1e;
+        }
+        .modal-box .actions .btn-confirm:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: var(--font);
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @media (max-width: 480px) {
+            #listView .header h1 {
+                font-size: 28px;
+            }
+            .editor-scroll {
+                margin: 0 8px 8px;
+                padding: 10px 16px 100px;
+            }
+            .editor-scroll .editor-title {
+                font-size: 24px;
+            }
+            .note-item {
+                padding: 12px 14px;
+            }
+            .format-toolbar button {
+                width: 34px;
+                height: 34px;
+                font-size: 14px;
+            }
+            .format-toolbar button svg {
+                width: 18px;
+                height: 18px;
+            }
+        }
+
+        #exportContainer {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            width: 420px;
+            background: #fff;
+            padding: 40px 36px;
+            font-family: var(--font);
+            color: #1c1c1e;
+            line-height: 1.7;
+            z-index: -1;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        #exportContainer .export-title {
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 2px;
+        }
+        #exportContainer .export-sub {
+            font-size: 19px;
+            color: #3a3a3c;
+            margin-bottom: 10px;
+        }
+        #exportContainer .export-body {
+            font-size: 17px;
+            line-height: 1.7;
+            color: #1c1c1e;
+        }
+        #exportContainer .export-body img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin: 8px 0;
+            display: block;
+        }
+        #exportContainer .export-body h1,
+        #exportContainer .export-body h2,
+        #exportContainer .export-body h3 {
+            font-weight: 700;
+            margin: 12px 0 6px;
+        }
+        #exportContainer .export-body h1 {
+            font-size: 26px;
+        }
+        #exportContainer .export-body h2 {
+            font-size: 22px;
+        }
+        #exportContainer .export-body h3 {
+            font-size: 19px;
+        }
+        #exportContainer .export-body ul,
+        #exportContainer .export-body ol {
+            padding-left: 24px;
+            margin: 6px 0;
+        }
+        #exportContainer .export-body blockquote {
+            border-left: 4px solid #ffd700;
+            padding-left: 16px;
+            margin: 8px 0;
+            color: #3a3a3c;
+        }
+        #exportContainer .export-body code {
+            background: #f2f2f7;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        #exportContainer .export-body pre {
+            background: #f2f2f7;
+            padding: 12px 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        #exportContainer .export-footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e5ea;
+            font-size: 13px;
+            color: #8e8e93;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+
+        <!-- ===== LIST VIEW ===== -->
+        <div id="listView" class="view active">
+            <div class="status-bar"></div>
+            <div class="header">
+                <h1>備忘錄</h1>
+                <div class="header-actions">
+                    <button id="btnNewNote" aria-label="新增備忘錄">
+                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input id="searchInput" type="text" placeholder="搜尋" />
+            </div>
+            <div class="note-list" id="noteList">
+                <!-- 动态渲染 -->
+            </div>
+        </div>
+
+        <!-- ===== EDITOR VIEW ===== -->
+        <div id="editorView" class="view slide-in">
+            <div class="status-bar"></div>
+            <div class="editor-header">
+                <button class="back-btn" id="btnBack">
+                    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    返回
+                </button>
+                <div class="actions">
+                    <button id="btnInsertImage" aria-label="插入圖片">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                    </button>
+                    <button id="btnExportImage" aria-label="匯出長圖">
+                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button id="btnDeleteNote" aria-label="刪除">
+                        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="editor-scroll" id="editorScroll">
+                <input class="editor-title" id="editorTitle" placeholder="標題" />
+                <input class="editor-sub" id="editorSub" placeholder="副標題" />
+                <div class="editor-body" id="editorBody" contenteditable="true"></div>
+            </div>
+
+            <!-- Format Toolbar -->
+            <div class="format-toolbar" id="formatToolbar">
+                <div class="group">
+                    <button data-cmd="bold" title="粗體"><svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+                    <button data-cmd="italic" title="斜體"><svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+                    <button data-cmd="underline" title="底線"><svg viewBox="0 0 24 24"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg></button>
+                    <button data-cmd="strikeThrough" title="刪除線"><svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><path d="M16 6.5A4 4 0 0 0 12 4a4 4 0 0 0-4 4c0 2 1.5 3.5 4 4"/><path d="M8 17.5A4 4 0 0 0 12 20a4 4 0 0 0 4-4c0-2-1.5-3.5-4-4"/></svg></button>
+                </div>
+                <div class="divider"></div>
+                <div class="group">
+                    <button data-cmd="formatBlock" data-value="h1" title="標題1">H1</button>
+                    <button data-cmd="formatBlock" data-value="h2" title="標題2">H2</button>
+                    <button data-cmd="formatBlock" data-value="h3" title="標題3">H3</button>
+                </div>
+                <div class="divider"></div>
+                <div class="group">
+                    <button data-cmd="insertUnorderedList" title="項目符號"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
+                    <button data-cmd="insertOrderedList" title="編號"><svg viewBox="0 0 24 24"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+                    <button data-cmd="formatBlock" data-value="blockquote" title="引用"><svg viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.5-2-3-1.244-.5-3.5-.5-4 0-.5.5-.5 2 0 3 1 0 2.5-.5 3 1v9c0 5-2 6-4 6z"/><path d="M14 21c3 0 7-1 7-8V5c0-1.25-.756-2.5-2-3-1.244-.5-3.5-.5-4 0-.5.5-.5 2 0 3 1 0 2.5-.5 3 1v9c0 5-2 6-4 6z"/></svg></button>
+                </div>
+                <div class="divider"></div>
+                <div class="group">
+                    <button data-cmd="removeFormat" title="清除格式"><svg viewBox="0 0 24 24"><path d="M12.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7.5-7z"/><path d="M12 2v7h7"/><path d="m9 14 6 4"/><path d="m15 14-6 4"/></svg></button>
+                    <div class="color-picker-wrap">
+                        <input type="color" id="textColorPicker" value="#1c1c1e" title="文字顏色" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MODAL ===== -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-box">
+                <h3 id="modalTitle">匯出長圖</h3>
+                <p id="modalDesc">將這篇備忘錄匯出為一張長圖，分享或儲存。</p>
+                <div class="actions">
+                    <button class="btn-cancel" id="modalCancel">取消</button>
+                    <button class="btn-confirm" id="modalConfirm">確認匯出</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOAST ===== -->
+        <div class="toast" id="toast"></div>
+
+        <!-- ===== HIDDEN ===== -->
+        <input type="file" id="imageInput" accept="image/*" multiple />
+        <div id="exportContainer"></div>
+
+    </div>
+
+    <script>
+        // ============================================================
+        //  DATA LAYER
+        // ============================================================
+        const DB_KEY = 'memo_notes';
+
+        function loadNotes() {
+            try {
+                const raw = localStorage.getItem(DB_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.warn('读取数据失败，重置为空', e);
+                return [];
+            }
+        }
+
+        function saveNotes(notes) {
+            localStorage.setItem(DB_KEY, JSON.stringify(notes));
+        }
+
+        function genId() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+
+        function createNote(title = '', sub = '', body = '') {
+            return {
+                id: genId(),
+                title: title || '',
+                sub: sub || '',
+                body: body || '',
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+        }
+
+        // ============================================================
+        //  STATE
+        // ============================================================
+        let notes = loadNotes();
+        let currentId = null;
+        let searchQuery = '';
+        let isEditing = false;
+
+        // ============================================================
+        //  DOM REFS
+        // ============================================================
+        const $ = (s) => document.querySelector(s);
+        const $$ = (s) => document.querySelectorAll(s);
+
+        const listView = $('#listView');
+        const editorView = $('#editorView');
+        const noteList = $('#noteList');
+        const searchInput = $('#searchInput');
+        const btnNewNote = $('#btnNewNote');
+        const btnBack = $('#btnBack');
+        const btnDeleteNote = $('#btnDeleteNote');
+        const btnInsertImage = $('#btnInsertImage');
+        const btnExportImage = $('#btnExportImage');
+        const editorTitle = $('#editorTitle');
+        const editorSub = $('#editorSub');
+        const editorBody = $('#editorBody');
+        const editorScroll = $('#editorScroll');
+        const imageInput = $('#imageInput');
+        const modalOverlay = $('#modalOverlay');
+        const modalTitle = $('#modalTitle');
+        const modalDesc = $('#modalDesc');
+        const modalConfirm = $('#modalConfirm');
+        const modalCancel = $('#modalCancel');
+        const toast = $('#toast');
+        const exportContainer = $('#exportContainer');
+        const textColorPicker = $('#textColorPicker');
+
+        let toastTimer = null;
+
+        // ============================================================
+        //  TOAST
+        // ============================================================
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ============================================================
+        //  SAFE HELPERS
+        // ============================================================
+        function safeStr(val) {
+            return val || '';
+        }
+
+        function escapeHtml(str) {
+            if (!str && str !== 0) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function extractFirstImg(html) {
+            if (!html) return null;
+            const m = html.match(/<img[^>]+src="([^">]+)"/);
+            return m ? m[1] : null;
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts);
+            if (isNaN(d.getTime())) return '--';
+            const now = new Date();
+            const isToday = d.toDateString() === now.toDateString();
+            if (isToday) {
+                return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            }
+            const isYesterday = new Date(now - 86400000).toDateString() === d.toDateString();
+            if (isYesterday) return '昨天';
+            if (now.getFullYear() === d.getFullYear()) {
+                return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+            }
+            return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function getPreview(n) {
+            const body = safeStr(n.body);
+            let text = body.replace(/<[^>]+>/g, ' ').trim();
+            if (!text && n.sub) text = safeStr(n.sub);
+            if (!text && n.title) text = safeStr(n.title);
+            if (!text) return '沒有內容';
+            return text.slice(0, 60) + (text.length > 60 ? '…' : '');
+        }
+
+        // ============================================================
+        //  RENDER LIST (with error boundary)
+        // ============================================================
+        function renderList() {
+            try {
+                const q = searchQuery.trim().toLowerCase();
+                let filtered = notes;
+                if (q) {
+                    filtered = notes.filter(n =>
+                        safeStr(n.title).toLowerCase().includes(q) ||
+                        safeStr(n.sub).toLowerCase().includes(q) ||
+                        safeStr(n.body).toLowerCase().includes(q)
+                    );
+                }
+                filtered = [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
+
+                if (filtered.length === 0) {
+                    noteList.innerHTML = `
+                        <div class="empty">
+                            <div class="icon">📝</div>
+                            ${q ? '沒有符合的備忘錄' : '還沒有備忘錄，點擊 + 新增'}
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                for (const n of filtered) {
+                    const preview = getPreview(n);
+                    const dateStr = formatDate(n.updatedAt);
+                    const hasImg = /<img[^>]+>/.test(safeStr(n.body));
+                    const firstImg = hasImg ? extractFirstImg(n.body) : null;
+                    const titleText = escapeHtml(safeStr(n.title)) || '無標題';
+
+                    html += `
+                        <div class="note-item" data-id="${n.id}">
+                            <div class="color-dot"></div>
+                            <div class="info">
+                                <div class="title">${titleText}</div>
+                                <div class="preview">${escapeHtml(preview)}</div>
+                                <div class="meta">
+                                    <span class="date">${dateStr}</span>
+                                    ${hasImg ? '<span>🖼️</span>' : ''}
+                                </div>
+                            </div>
+                            ${firstImg ? `<div class="thumb"><img src="${firstImg}" alt="thumbnail" loading="lazy" /></div>` : ''}
+                        </div>
+                    `;
+                }
+                noteList.innerHTML = html;
+
+                noteList.querySelectorAll('.note-item').forEach(el => {
+                    el.addEventListener('click', () => {
+                        const id = el.dataset.id;
+                        if (id) openNote(id);
+                    });
+                });
+            } catch (e) {
+                console.error('渲染列表失败:', e);
+                noteList.innerHTML = `<div class="empty"><div class="icon">⚠️</div>渲染出错，请刷新页面</div>`;
+            }
+        }
+
+        // ============================================================
+        //  EDITOR
+        // ============================================================
+        function openNote(id) {
+            try {
+                const note = notes.find(n => n.id === id);
+                if (!note) {
+                    console.warn('笔记未找到:', id);
+                    return;
+                }
+                currentId = id;
+                editorTitle.value = safeStr(note.title);
+                editorSub.value = safeStr(note.sub);
+                editorBody.innerHTML = safeStr(note.body);
+                isEditing = true;
+                switchView('editor');
+                updateToolbarState();
+                setTimeout(() => editorBody.focus(), 100);
+            } catch (e) {
+                console.error('打开笔记失败:', e);
+                showToast('打开失败，请重试');
+            }
+        }
+
+        function saveCurrentNote() {
+            if (!currentId) return;
+            try {
+                const note = notes.find(n => n.id === currentId);
+                if (!note) return;
+                note.title = editorTitle.value.trim();
+                note.sub = editorSub.value.trim();
+                note.body = editorBody.innerHTML.trim() || '';
+                note.updatedAt = Date.now();
+                saveNotes(notes);
+                renderList();
+            } catch (e) {
+                console.warn('自动保存失败:', e);
+            }
+        }
+
+        function autoSave() {
+            if (isEditing && currentId) {
+                saveCurrentNote();
+            }
+        }
+
+        // Auto-save on input
+        editorTitle.addEventListener('input', autoSave);
+        editorSub.addEventListener('input', autoSave);
+        editorBody.addEventListener('input', autoSave);
+
+        // ============================================================
+        //  VIEW SWITCH
+        // ============================================================
+        function switchView(view) {
+            try {
+                if (view === 'list') {
+                    listView.classList.add('active');
+                    editorView.classList.remove('active');
+                    editorView.classList.remove('slide-in');
+                    void editorView.offsetWidth;
+                    editorView.classList.add('slide-in');
+                    if (isEditing) {
+                        autoSave();
+                        isEditing = false;
+                        currentId = null;
+                    }
+                    renderList();
+                } else {
+                    listView.classList.remove('active');
+                    editorView.classList.add('active');
+                    editorView.classList.remove('slide-in');
+                    void editorView.offsetWidth;
+                    editorView.classList.add('slide-in');
+                }
+            } catch (e) {
+                console.error('视图切换失败:', e);
+            }
+        }
+
+        // ============================================================
+        //  NAVIGATION
+        // ============================================================
+        btnBack.addEventListener('click', () => switchView('list'));
+
+        btnNewNote.addEventListener('click', () => {
+            try {
+                console.log('➕ 新增備忘錄 (点击有效)');
+                const note = createNote('', '', '');
+                notes.push(note);
+                saveNotes(notes);
+                renderList();
+                openNote(note.id);
+            } catch (e) {
+                console.error('新增備忘錄失敗:', e);
+                showToast('新增失敗，請查看控制台');
+            }
+        });
+
+        btnDeleteNote.addEventListener('click', () => {
+            if (!currentId) return;
+            if (confirm('確定要刪除這篇備忘錄嗎？')) {
+                notes = notes.filter(n => n.id !== currentId);
+                saveNotes(notes);
+                renderList();
+                switchView('list');
+                showToast('已刪除');
+            }
+        });
+
+        // ============================================================
+        //  SEARCH
+        // ============================================================
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderList();
+        });
+
+        // ============================================================
+        //  IMAGE INSERT
+        // ============================================================
+        btnInsertImage.addEventListener('click', () => imageInput.click());
+
+        imageInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (!files.length) return;
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    insertImageAtCursor(ev.target.result);
+                    autoSave();
+                };
+                reader.readAsDataURL(file);
+            }
+            imageInput.value = '';
+        });
+
+        function insertImageAtCursor(dataUrl) {
+            const sel = window.getSelection();
+            let range;
+            if (sel.rangeCount > 0) {
+                range = sel.getRangeAt(0);
+            } else {
+                range = document.createRange();
+                range.setStart(editorBody, 0);
+                range.collapse(true);
+            }
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.alt = '圖片';
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '10px';
+            img.style.margin = '8px 0';
+            range.insertNode(img);
+            range.setStartAfter(img);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            editorBody.dispatchEvent(new Event('input'));
+        }
+
+        // ============================================================
+        //  FORMAT TOOLBAR
+        // ============================================================
+        function updateToolbarState() {
+            try {
+                document.querySelectorAll('[data-cmd]').forEach(btn => {
+                    const cmd = btn.dataset.cmd;
+                    let active = false;
+                    if (cmd === 'bold') active = document.queryCommandState('bold');
+                    else if (cmd === 'italic') active = document.queryCommandState('italic');
+                    else if (cmd === 'underline') active = document.queryCommandState('underline');
+                    else if (cmd === 'strikeThrough') active = document.queryCommandState('strikeThrough');
+                    else if (cmd === 'insertUnorderedList') active = document.queryCommandState(
+                    'insertUnorderedList');
+                    else if (cmd === 'insertOrderedList') active = document.queryCommandState(
+                    'insertOrderedList');
+                    else if (cmd === 'formatBlock') {
+                        const val = btn.dataset.value;
+                        const block = document.queryCommandValue('formatBlock') || '';
+                        active = block.toLowerCase() === val.toLowerCase();
+                    }
+                    btn.classList.toggle('active', !!active);
+                });
+            } catch (e) { /* ignore */ }
+        }
+
+        document.querySelectorAll('[data-cmd]').forEach(btn => {
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const cmd = btn.dataset.cmd;
+                const val = btn.dataset.value || null;
+                try {
+                    if (cmd === 'formatBlock') {
+                        document.execCommand('formatBlock', false, val);
+                    } else if (cmd === 'removeFormat') {
+                        document.execCommand('removeFormat', false, null);
+                    } else {
+                        document.execCommand(cmd, false, val);
+                    }
+                } catch (ex) { /* ignore */ }
+                editorBody.focus();
+                updateToolbarState();
+                autoSave();
+            });
+        });
+
+        textColorPicker.addEventListener('input', (e) => {
+            document.execCommand('foreColor', false, e.target.value);
+            editorBody.focus();
+            autoSave();
+        });
+
+        document.addEventListener('selectionchange', () => {
+            if (isEditing) updateToolbarState();
+        });
+
+        editorBody.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                let cmd = null;
+                if (e.key === 'b') cmd = 'bold';
+                else if (e.key === 'i') cmd = 'italic';
+                else if (e.key === 'u') cmd = 'underline';
+                if (cmd) {
+                    e.preventDefault();
+                    document.execCommand(cmd, false, null);
+                    updateToolbarState();
+                    autoSave();
+                }
+            }
+        });
+
+        // ============================================================
+        //  EXPORT LONG IMAGE
+        // ============================================================
+        btnExportImage.addEventListener('click', () => {
+            if (!currentId) return;
+            const note = notes.find(n => n.id === currentId);
+            if (!note) return;
+            if (!note.title && !note.sub && !note.body) {
+                showToast('備忘錄是空的，無法匯出');
+                return;
+            }
+            modalTitle.textContent = '匯出長圖';
+            modalDesc.textContent = '將這篇備忘錄匯出為一張長圖，分享或儲存。';
+            modalConfirm.textContent = '匯出';
+            modalConfirm.disabled = false;
+            modalOverlay.classList.add('active');
+            modalConfirm._note = note;
+        });
+
+        modalCancel.addEventListener('click', () => modalOverlay.classList.remove('active'));
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+        });
+
+        modalConfirm.addEventListener('click', async () => {
+            const note = modalConfirm._note;
+            if (!note) return;
+            modalConfirm.disabled = true;
+            modalConfirm.textContent = '生成中…';
+
+            try {
+                const container = exportContainer;
+                container.innerHTML = '';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'export-title';
+                titleDiv.textContent = safeStr(note.title) || '無標題';
+                container.appendChild(titleDiv);
+
+                if (note.sub) {
+                    const subDiv = document.createElement('div');
+                    subDiv.className = 'export-sub';
+                    subDiv.textContent = safeStr(note.sub);
+                    container.appendChild(subDiv);
+                }
+
+                const bodyDiv = document.createElement('div');
+                bodyDiv.className = 'export-body';
+                bodyDiv.innerHTML = safeStr(note.body) || '<p style="color:#8e8e93;">（沒有內容）</p>';
+                container.appendChild(bodyDiv);
+
+                const footer = document.createElement('div');
+                footer.className = 'export-footer';
+                footer.textContent = `備忘錄 · ${new Date(note.updatedAt).toLocaleString('zh-CN')}`;
+                container.appendChild(footer);
+
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: 420,
+                });
+
+                const link = document.createElement('a');
+                link.download = `備忘錄_${safeStr(note.title) || '無標題'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showToast('匯出成功！');
+                modalOverlay.classList.remove('active');
+            } catch (err) {
+                console.error(err);
+                showToast('匯出失敗，請重試');
+                modalOverlay.classList.remove('active');
+            } finally {
+                modalConfirm.disabled = false;
+                modalConfirm.textContent = '匯出';
+            }
+        });
+
+        // ============================================================
+        //  KEYBOARD SHORTCUTS
+        // ============================================================
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                if (isEditing) {
+                    autoSave();
+                    showToast('已儲存');
+                }
+            }
+            if (e.key === 'Escape') {
+                if (modalOverlay.classList.contains('active')) {
+                    modalOverlay.classList.remove('active');
+                } else if (isEditing) {
+                    switchView('list');
+                }
+            }
+        });
+
+        // ============================================================
+        //  PWA: Service Worker
+        // ============================================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript;base64,' + btoa(`
+                self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+                self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+            `)).catch(() => {});
+        }
+
+        // ============================================================
+        //  PASTE IMAGE
+        // ============================================================
+        editorBody.addEventListener('paste', (e) => {
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        insertImageAtCursor(ev.target.result);
+                        autoSave();
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        });
+
+        // ============================================================
+        //  INIT
+        // ============================================================
+        renderList();
+
+        if (notes.length === 0) {
+            const welcome = createNote(
+                '歡迎使用備忘錄',
+                '開始記錄你的想法',
+                '<p>這是一個功能完整的 PWA 備忘錄。</p><p>✨ 支援 <strong>粗體</strong>、<em>斜體</em>、<u>底線</u></p><p>📷 可插入圖片</p><p>🖼️ 可匯出長圖</p><p style="color:#8e8e93;">試試看吧！</p>'
+            );
+            notes.push(welcome);
+            saveNotes(notes);
+            renderList();
+        }
+
+        setInterval(() => {
+            if (isEditing) autoSave();
+        }, 3000);
+
+        window.addEventListener('beforeunload', () => {
+            if (isEditing) autoSave();
+        });
+
+        console.log('📝 備忘錄 PWA 已啟動 (修复版)');
+        console.log(`📄 共 ${notes.length} 篇備忘錄`);
+    </script>
+
+</body>
+</html>
