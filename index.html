@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="備忘錄">
   <!-- 引入 html2canvas 用於導出長圖 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -16,7 +16,7 @@
 
   <!-- 1. 清單頁面 (List View) -->
   <div id="list-view" class="view active">
-    <header class="ios-header">
+    <header class="ios-header-fixed">
       <div class="header-top">
         <span class="back-btn-placeholder"></span>
         <span class="header-title">備忘錄</span>
@@ -28,13 +28,13 @@
     </header>
 
     <main class="note-list-container">
-      <div class="folder-title">所有備忘錄</div>
+      <div class="folder-title">所有 iCloud</div>
       <div id="notes-list" class="ios-list">
-        <!-- 備忘錄列表項目會由 JS 動態生成 -->
+        <!-- 備忘錄列表項目 -->
       </div>
     </main>
 
-    <footer class="ios-footer">
+    <footer class="ios-footer-fixed">
       <span id="note-count">0 個備忘錄</span>
       <button id="new-note-btn" class="ios-icon-btn">📝</button>
     </footer>
@@ -42,36 +42,64 @@
 
   <!-- 2. 編輯頁面 (Editor View) -->
   <div id="editor-view" class="view">
-    <header class="ios-header-editor">
+    <!-- 頂部 Fixed Bar -->
+    <header class="ios-header-editor-fixed">
       <button id="back-to-list" class="ios-back-btn">
-        <span class="chevron"></span> 備忘錄
+        <span class="chevron"></span>All iCloud
       </button>
-      <div class="editor-actions">
-        <button id="share-btn" class="ios-icon-btn">📤</button>
-        <button id="format-btn" class="ios-icon-btn">Aa</button>
-        <button id="insert-img-btn" class="ios-icon-btn">📷</button>
-        <input type="file" id="image-loader" accept="image/*" style="display: none;">
-        <button id="delete-note-btn" class="ios-icon-btn trash">🗑️</button>
+      <div class="editor-top-actions">
+        <!-- 分享（導出長圖） -->
+        <button id="share-btn" class="ios-icon-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+        </button>
+        <!-- 更多（數據管理/刪除） -->
+        <button id="more-btn" class="ios-icon-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+        </button>
       </div>
     </header>
 
-    <!-- 編輯區域 (導出長圖時會擷取此區塊) -->
+    <!-- 編輯區域 (滾動內容區) -->
     <main id="note-editor-container" class="editor-container">
-      <div class="note-date" id="note-timestamp">2026年7月16日 19:57</div>
+      <div class="note-date" id="note-timestamp">16 July 2026 at 17:13</div>
       <div id="editor" contenteditable="true" placeholder="開始輸入..."></div>
     </main>
+
+    <!-- 底部功能 Fixed Bar (完全對齊截圖) -->
+    <footer class="ios-editor-footer-fixed">
+      <button id="format-btn" class="ios-icon-btn">
+        <!-- 待辦/格式圖標 -->
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
+      </button>
+      
+      <button id="insert-img-btn" class="ios-icon-btn">
+        <!-- 相機圖標 -->
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+      <input type="file" id="image-loader" accept="image/*" style="display: none;">
+
+      <button id="markup-btn" class="ios-icon-btn">
+        <!-- 畫筆圖標 -->
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
+
+      <button id="new-note-from-editor-btn" class="ios-icon-btn">
+        <!-- 新建圖標 -->
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </footer>
   </div>
 
   <!-- 3. iOS 格式化工具列 (Format Sheet) -->
   <div id="format-sheet" class="ios-sheet">
     <div class="sheet-header">
-      <h3>格式</h3>
+      <h3>格式樣式</h3>
       <button id="close-format" class="close-btn">完成</button>
     </div>
     <div class="format-options">
-      <button class="format-style-btn" data-command="formatBlock" data-value="h1">標題</button>
-      <button class="format-style-btn" data-command="formatBlock" data-value="h2">子標題</button>
-      <button class="format-style-btn" data-command="formatBlock" data-value="p">內文</button>
+      <button class="format-style-btn" data-command="formatBlock" data-value="h1">標題 (Title)</button>
+      <button class="format-style-btn" data-command="formatBlock" data-value="h2">子標題 (Subtitle)</button>
+      <button class="format-style-btn" data-command="formatBlock" data-value="p">內文 (Body)</button>
       <hr class="sheet-divider">
       <div class="inline-formats">
         <button class="format-inline-btn" data-command="bold"><b>B</b></button>
@@ -82,41 +110,34 @@
     </div>
   </div>
 
-  <!-- 4. iOS 導出/導入選單 (Settings Sheet) -->
-  <div id="settings-sheet" class="ios-sheet">
+  <!-- 4. iOS 更多/設定選單 (More Actions Sheet) -->
+  <div id="more-sheet" class="ios-sheet">
     <div class="sheet-header">
-      <h3>備忘錄數據管理</h3>
-      <button id="close-settings" class="close-btn">完成</button>
+      <h3>備忘錄選項</h3>
+      <button id="close-more" class="close-btn">完成</button>
     </div>
     <div class="settings-options">
-      <button id="export-data-btn" class="settings-action-btn">📤 導出備忘錄備份 (JSON)</button>
-      <button id="trigger-import-btn" class="settings-action-btn">📥 導入備忘錄備份 (JSON)</button>
+      <button id="export-data-btn" class="settings-action-btn">📤 導出備忘錄數據 (JSON)</button>
+      <button id="trigger-import-btn" class="settings-action-btn">📥 導入備忘錄數據 (JSON)</button>
       <input type="file" id="import-file-input" accept=".json" style="display: none;">
+      <hr class="sheet-divider">
+      <button id="delete-note-btn" class="settings-action-btn danger">🗑️ 刪除此備忘錄</button>
     </div>
   </div>
 
-  <!-- 5. iOS 分享/導出長圖選單 (Share Sheet) -->
+  <!-- 5. iOS 分享/長圖選單 -->
   <div id="share-sheet" class="ios-sheet">
     <div class="sheet-header">
-      <h3>分享備忘錄</h3>
+      <h3>分享與導出</h3>
       <button id="close-share" class="close-btn">完成</button>
     </div>
     <div class="settings-options">
-      <button id="export-long-img-btn" class="settings-action-btn primary">🖼️ 導出長圖 (PNG)</button>
+      <button id="export-long-img-btn" class="settings-action-btn primary">🖼️ 導出高畫質長圖 (PNG)</button>
     </div>
   </div>
 
-  <!-- 背景遮罩 -->
   <div id="overlay" class="ios-overlay"></div>
 
   <script src="app.js"></script>
-  <script>
-    // 註冊 PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
-      });
-    }
-  </script>
 </body>
 </html>
