@@ -1,13 +1,14 @@
-/* --- iOS 經典設計規範與變數 --- */
+/* --- iOS 精準視覺變數 --- */
 :root {
-  --ios-yellow: #ff9f0a;
-  --ios-yellow-light: #ffd60a;
-  --bg-primary: #000000;
-  --bg-secondary: #1c1c1e;
-  --bg-tertiary: #2c2c2e;
-  --text-primary: #ffffff;
-  --text-secondary: #8e8e93;
-  --border-color: #38383a;
+  --ios-yellow: #e4af0a; /* 經典 iOS 備忘錄黃 */
+  --bg-dark-list: #000000;
+  --bg-dark-item: #1c1c1e;
+  --bg-light-editor: #ffffff; /* 編輯器改為純白底 */
+  --text-dark: #000000;
+  --text-light: #ffffff;
+  --text-muted: #8e8e93;
+  --border-light: #e5e5ea;
+  --border-dark: #38383a;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -20,16 +21,16 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark-list);
+  color: var(--text-light);
   overflow: hidden;
   height: 100vh;
   width: 100vw;
   user-select: none;
 }
 
-/* --- 視圖切換與動畫 (Slide Transitions) --- */
+/* --- 視圖切換 --- */
 .view {
   position: absolute;
   top: 0;
@@ -41,50 +42,66 @@ body {
   transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.35s ease;
   opacity: 0;
   pointer-events: none;
-  background-color: var(--bg-primary);
 }
 
 #list-view {
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
+  background-color: var(--bg-dark-list);
   z-index: 1;
 }
 
 #editor-view {
   transform: translateX(100%);
+  background-color: var(--bg-light-editor); /* 編輯器為白色背景 */
+  color: var(--text-dark);
   z-index: 2;
 }
 
-/* 視圖切換啟動樣式 */
-#list-view.active {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
+/* 啟動狀態 */
 #list-view.inactive {
   transform: translateX(-30%);
   opacity: 0.6;
 }
-
 #editor-view.active {
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
 }
 
-/* --- iOS Header & Navigation --- */
-.ios-header {
+/* --- 頂部導航欄 (Fixed Header) --- */
+.ios-header-fixed {
   padding-top: calc(var(--safe-area-top) + 15px);
   padding-left: 16px;
   padding-right: 16px;
   padding-bottom: 10px;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* 編輯頁面 Fixed Header */
+.ios-header-editor-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(var(--safe-area-top) + 50px);
+  padding-top: var(--safe-area-top);
+  padding-left: 12px;
+  padding-right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9); /* 高質感白底毛玻璃 */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+  border-bottom: 0.5px solid var(--border-light);
 }
 
 .header-top {
@@ -97,21 +114,11 @@ body {
 .header-title {
   font-size: 34px;
   font-weight: 700;
-  color: #fff;
 }
 
-.ios-header-editor {
-  padding-top: calc(var(--safe-area-top) + 10px);
-  padding-bottom: 10px;
-  padding-left: 12px;
-  padding-right: 16px;
+.editor-top-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(28, 28, 30, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 0.5px solid var(--border-color);
+  gap: 15px;
 }
 
 /* 搜尋框 */
@@ -123,18 +130,17 @@ body {
   padding: 8px 12px;
   border-radius: 10px;
   border: none;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-dark-item);
   color: #fff;
   font-size: 17px;
   outline: none;
 }
 
-/* --- iOS 按鈕樣式 --- */
+/* --- 按鈕樣式 (iOS配色) --- */
 .ios-icon-btn {
   background: none;
   border: none;
   color: var(--ios-yellow);
-  font-size: 22px;
   cursor: pointer;
   padding: 8px;
   display: flex;
@@ -143,43 +149,41 @@ body {
   transition: opacity 0.2s;
 }
 .ios-icon-btn:active {
-  opacity: 0.4;
+  opacity: 0.3;
 }
-.ios-icon-btn.trash {
-  color: #ff453a; /* iOS Red */
+.ios-icon-btn svg {
+  stroke: var(--ios-yellow);
 }
 
-/* 經典 iOS 返回按鈕 */
+/* iOS 經典返回按鈕 (左箭頭與文字) */
 .ios-back-btn {
   background: none;
   border: none;
   color: var(--ios-yellow);
   font-size: 17px;
+  font-weight: 400;
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 5px 0;
 }
 .ios-back-btn .chevron {
   border-style: solid;
   border-width: 3px 3px 0 0;
   content: '';
   display: inline-block;
-  height: 12px;
-  left: 0;
-  position: relative;
-  vertical-align: top;
-  width: 12px;
+  height: 10px;
+  width: 10px;
   transform: rotate(-135deg);
-  margin-right: 5px;
+  margin-right: 6px;
+  color: var(--ios-yellow);
 }
 
-/* --- 列表視圖 --- */
+/* --- 備忘錄清單 --- */
 .note-list-container {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background-color: var(--bg-primary);
+  padding-bottom: 80px;
 }
 
 .folder-title {
@@ -187,139 +191,148 @@ body {
   font-weight: 700;
   margin-bottom: 12px;
   margin-left: 4px;
+  color: #fff;
 }
 
 .ios-list {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-dark-item);
   border-radius: 12px;
   overflow: hidden;
 }
 
-/* 單個備忘錄項目 */
 .ios-list-item {
   padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  border-bottom: 0.5px solid var(--border-color);
-  cursor: pointer;
-}
-.ios-list-item:last-child {
-  border-bottom: none;
+  border-bottom: 0.5px solid var(--border-dark);
 }
 .ios-list-item:active {
-  background-color: var(--bg-tertiary);
+  background-color: #2c2c2e;
 }
 .item-title {
   font-size: 17px;
   font-weight: 600;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
 }
 .item-meta {
   font-size: 15px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: flex;
   gap: 8px;
 }
-.item-desc {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #8e8e93;
-}
 
-/* --- 編輯器主體區域 (導出長圖的核心區域) --- */
+/* --- 編輯器內容區 (自動適應 Fixed Header & Footer) --- */
 .editor-container {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background-color: var(--bg-primary); /* 如果有需要導出為白底，JS 會在導出時暫時處理 */
+  padding-top: calc(var(--safe-area-top) + 65px); /* 留空給頂部 fixed bar */
+  padding-bottom: calc(var(--safe-area-bottom) + 80px); /* 留空給底部 fixed bar */
+  background-color: var(--bg-light-editor);
 }
 
 .note-date {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  letter-spacing: -0.24px;
 }
 
 #editor {
   outline: none;
   font-size: 17px;
   line-height: 1.6;
-  color: var(--text-primary);
-  min-height: 80%;
+  color: var(--text-dark);
+  min-height: 70vh;
   user-select: text;
 }
 
 #editor img {
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: 12px;
   margin: 12px 0;
   display: block;
 }
 
 /* 富文本格式（對應 iOS 原生大小） */
 #editor h1 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  margin-top: 15px;
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 #editor h2 {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
-  margin-top: 12px;
+  margin-top: 10px;
   margin-bottom: 8px;
 }
 #editor p {
   font-size: 17px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-/* Placeholder */
 #editor:empty:before {
   content: attr(placeholder);
-  color: var(--text-secondary);
-  cursor: text;
+  color: #c7c7cc;
 }
 
-/* --- iOS Footer --- */
-.ios-footer {
-  padding-bottom: calc(var(--safe-area-bottom) + 12px);
-  padding-top: 12px;
-  padding-left: 20px;
-  padding-right: 20px;
+/* --- 底部工具欄 (Fixed Footers) --- */
+.ios-footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: calc(var(--safe-area-bottom) + 50px);
+  padding-bottom: var(--safe-area-bottom);
   background: rgba(28, 28, 30, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 0.5px solid var(--border-color);
+  border-top: 0.5px solid var(--border-dark);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
-  color: var(--text-primary);
+  padding-left: 20px;
+  padding-right: 20px;
+  z-index: 10;
 }
 
-/* --- iOS 半彈出式底欄 (Action Sheets) --- */
+/* 編輯器底部 Toolbar (完美復刻截圖) */
+.ios-editor-footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: calc(var(--safe-area-bottom) + 50px);
+  padding-bottom: var(--safe-area-bottom);
+  background: rgba(255, 255, 255, 0.9); /* 高質感白底半透明 */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 0.5px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 24px;
+  padding-right: 24px;
+  z-index: 100;
+}
+
+/* --- iOS Action Sheets --- */
 .ios-sheet {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: var(--bg-secondary);
+  background-color: #f2f2f7; /* iOS 設定頁淺灰底 */
+  color: #000;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
-  z-index: 100;
+  z-index: 200;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   padding: 16px;
   padding-bottom: calc(var(--safe-area-bottom) + 16px);
 }
-
 .ios-sheet.open {
   transform: translateY(0);
 }
@@ -328,42 +341,34 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
-
 .sheet-header h3 {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
 }
-
 .close-btn {
   background: none;
   border: none;
   color: var(--ios-yellow);
   font-size: 17px;
   font-weight: 600;
-  cursor: pointer;
 }
 
-/* 格式化按鈕排版 */
 .format-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .format-style-btn {
-  background-color: var(--bg-tertiary);
+  background-color: #fff;
   border: none;
-  color: #fff;
-  padding: 12px;
+  color: #000;
+  padding: 14px;
   border-radius: 10px;
   font-size: 17px;
   text-align: left;
-  cursor: pointer;
-}
-.sheet-divider {
-  border: none;
-  border-top: 0.5px solid var(--border-color);
+  font-weight: 500;
 }
 .inline-formats {
   display: grid;
@@ -371,39 +376,39 @@ body {
   gap: 10px;
 }
 .format-inline-btn {
-  background-color: var(--bg-tertiary);
+  background-color: #fff;
   border: none;
-  color: #fff;
+  color: #000;
   padding: 12px;
   border-radius: 10px;
   font-size: 17px;
-  cursor: pointer;
 }
 
-/* 導入導出按鈕樣式 */
 .settings-options {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .settings-action-btn {
-  background-color: var(--bg-tertiary);
+  background-color: #fff;
   border: none;
   color: var(--ios-yellow);
   padding: 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 17px;
   font-weight: 500;
-  cursor: pointer;
   text-align: center;
+}
+.settings-action-btn.danger {
+  color: #ff3b30; /* iOS 紅色 */
 }
 .settings-action-btn.primary {
   background-color: var(--ios-yellow);
-  color: #000;
+  color: #fff;
   font-weight: 600;
 }
 
-/* 背景模糊遮罩 */
+/* 遮罩背景 */
 .ios-overlay {
   position: fixed;
   top: 0;
@@ -411,11 +416,10 @@ body {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0,0,0,0.4);
-  backdrop-filter: blur(4px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
-  z-index: 90;
+  z-index: 150;
 }
 .ios-overlay.active {
   opacity: 1;
