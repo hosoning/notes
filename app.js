@@ -1,563 +1,301 @@
-// ============================================================
-//  数据层
-// ============================================================
-const DB_KEY = 'memo_notes';
+// --- 狀態管理與變數初始化 ---
+let notes = JSON.parse(localStorage.getItem('notes')) || [];
+let activeNoteId = null;
 
-function loadNotes() {
-    try {
-        const raw = localStorage.getItem(DB_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+// DOM 元素
+const listView = document.getElementById('list-view');
+const editorView = document.getElementById('editor-view');
+const notesList = document.getElementById('notes-list');
+const noteCount = document.getElementById('note-count');
+const editor = document.getElementById('editor');
+const noteTimestamp = document.getElementById('note-timestamp');
+const searchInput = document.getElementById('search-input');
+
+// 彈出層
+const overlay = document.getElementById('overlay');
+const formatSheet = document.getElementById('format-sheet');
+const settingsSheet = document.getElementById('settings-sheet');
+const shareSheet = document.getElementById('share-sheet');
+
+// --- 核心初始化與渲染 ---
+function init() {
+  renderNotesList();
+  setupEventListeners();
 }
 
-function saveNotes(notes) {
-    localStorage.setItem(DB_KEY, JSON.stringify(notes));
+function saveNotesToStorage() {
+  localStorage.setItem('notes', JSON.stringify(notes));
+  renderNotesList();
 }
 
-function genId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function formatDate(timestamp) {
+  const date = new Date(timestamp);
+  const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+  return date.toLocaleDateString('zh-TW', options);
 }
 
-function createNote(title = '', sub = '', body = '') {
-    return {
-        id: genId(),
-        title: title || '',
-        sub: sub || '',
-        body: body || '',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-    };
+// 渲染清單
+function renderNotesList(filterText = '') {
+  notesList.innerHTML = '';
+  
+  // 按照最後修改時間排序
+  const sortedNotes = [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
+  const filtered = sortedNotes.filter(note => {
+    const text = (note.title + ' ' + note.content).toLowerCase();
+    return text.includes(filterText.toLowerCase());
+  });
+
+  noteCount.textContent = `${filtered.length} 個備忘錄`;
+
+  if (filtered.length === 0) {
+    notesList.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">沒有備忘錄</div>`;
+    return;
+  }
+
+  filtered.forEach(note => {
+    const item = document.createElement('div');
+    item.className = 'ios-list-item';
+    item.addEventListener('click', () => openNote(note.id));
+
+    const dateStr = new Date(note.updatedAt).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+    
+    item.innerHTML = `
+      <div class="item-title">${note.title || '新備忘錄'}</div>
+      <div class="item-meta">
+        <span>${dateStr}</span>
+        <span class="item-desc">${note.content.substring(0, 40) || '沒有其他文字'}</span>
+      </div>
+    `;
+    notesList.appendChild(item);
+  });
 }
 
-// ============================================================
-//  状态
-// ============================================================
-let notes = loadNotes();
-let currentId = null;
-let searchQuery = '';
-let isEditing = false;
-
-// ============================================================
-//  DOM 引用
-// ============================================================
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-
-const listView = $('#listView');
-const editorView = $('#editorView');
-const noteList = $('#noteList');
-const searchInput = $('#searchInput');
-const btnNewNote = $('#btnNewNote');
-const btnBack = $('#btnBack');
-const btnDeleteNote = $('#btnDeleteNote');
-const btnInsertImage = $('#btnInsertImage');
-const btnExportImage = $('#btnExportImage');
-const editorTitle = $('#editorTitle');
-const editorSub = $('#editorSub');
-const editorBody = $('#editorBody');
-const imageInput = $('#imageInput');
-const modalOverlay = $('#modalOverlay');
-const modalTitle = $('#modalTitle');
-const modalDesc = $('#modalDesc');
-const modalConfirm = $('#modalConfirm');
-const modalCancel = $('#modalCancel');
-const toast = $('#toast');
-const exportContainer = $('#exportContainer');
-const textColorPicker = $('#textColorPicker');
-
-let toastTimer = null;
-
-// ============================================================
-//  Toast
-// ============================================================
-function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
-}
-
-// ============================================================
-//  工具函数
-// ============================================================
-function safeStr(val) {
-    return val || '';
-}
-
-function escapeHtml(str) {
-    if (!str && str !== 0) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function extractFirstImg(html) {
-    if (!html) return null;
-    const m = html.match(/<img[^>]+src="([^">]+)"/);
-    return m ? m[1] : null;
-}
-
-function formatDate(ts) {
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return '--';
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    if (isToday) {
-        return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    }
-    const isYesterday = new Date(now - 86400000).toDateString() === d.toDateString();
-    if (isYesterday) return '昨天';
-    if (now.getFullYear() === d.getFullYear()) {
-        return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-    }
-    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function getPreview(n) {
-    const body = safeStr(n.body);
-    let text = body.replace(/<[^>]+>/g, ' ').trim();
-    if (!text && n.sub) text = safeStr(n.sub);
-    if (!text && n.title) text = safeStr(n.title);
-    if (!text) return '沒有內容';
-    return text.slice(0, 60) + (text.length > 60 ? '…' : '');
-}
-
-// ============================================================
-//  渲染列表
-// ============================================================
-function renderList() {
-    try {
-        const q = searchQuery.trim().toLowerCase();
-        let filtered = notes;
-        if (q) {
-            filtered = notes.filter(n =>
-                safeStr(n.title).toLowerCase().includes(q) ||
-                safeStr(n.sub).toLowerCase().includes(q) ||
-                safeStr(n.body).toLowerCase().includes(q)
-            );
-        }
-        filtered = [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
-
-        if (filtered.length === 0) {
-            noteList.innerHTML = `
-                <div class="empty">
-                    <div class="icon">📝</div>
-                    ${q ? '沒有符合的備忘錄' : '還沒有備忘錄，點擊 + 新增'}
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-        for (const n of filtered) {
-            const preview = getPreview(n);
-            const dateStr = formatDate(n.updatedAt);
-            const hasImg = /<img[^>]+>/.test(safeStr(n.body));
-            const firstImg = hasImg ? extractFirstImg(n.body) : null;
-            const titleText = escapeHtml(safeStr(n.title)) || '無標題';
-
-            html += `
-                <div class="note-item" data-id="${n.id}">
-                    <div class="color-dot"></div>
-                    <div class="info">
-                        <div class="title">${titleText}</div>
-                        <div class="preview">${escapeHtml(preview)}</div>
-                        <div class="meta">
-                            <span class="date">${dateStr}</span>
-                            ${hasImg ? '<span>🖼️</span>' : ''}
-                        </div>
-                    </div>
-                    ${firstImg ? `<div class="thumb"><img src="${firstImg}" alt="thumbnail" loading="lazy" /></div>` : ''}
-                </div>
-            `;
-        }
-        noteList.innerHTML = html;
-
-        noteList.querySelectorAll('.note-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = el.dataset.id;
-                if (id) openNote(id);
-            });
-        });
-    } catch (e) {
-        console.error('渲染列表失败:', e);
-        noteList.innerHTML = `<div class="empty"><div class="icon">⚠️</div>渲染出错，请刷新页面</div>`;
-    }
-}
-
-// ============================================================
-//  编辑器操作
-// ============================================================
+// --- 視圖控制與編輯 ---
 function openNote(id) {
-    try {
-        const note = notes.find(n => n.id === id);
-        if (!note) return;
-        currentId = id;
-        editorTitle.value = safeStr(note.title);
-        editorSub.value = safeStr(note.sub);
-        editorBody.innerHTML = safeStr(note.body);
-        isEditing = true;
-        switchView('editor');
-        updateToolbarState();
-        setTimeout(() => editorBody.focus(), 100);
-    } catch (e) {
-        console.error('打开笔记失败:', e);
-        showToast('打开失败，请重试');
-    }
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  activeNoteId = id;
+
+  editor.innerHTML = note.htmlContent || note.content;
+  noteTimestamp.textContent = formatDate(note.updatedAt);
+
+  // iOS 滑動切換動畫
+  listView.classList.add('inactive');
+  listView.classList.remove('active');
+  editorView.classList.add('active');
+}
+
+function backToList() {
+  saveCurrentNote();
+  listView.classList.add('active');
+  listView.classList.remove('inactive');
+  editorView.classList.remove('active');
+  activeNoteId = null;
+}
+
+function createNewNote() {
+  const newNote = {
+    id: Date.now().toString(),
+    title: '新備忘錄',
+    content: '',
+    htmlContent: '<div><br></div>',
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  notes.unshift(newNote);
+  saveNotesToStorage();
+  openNote(newNote.id);
+  editor.focus();
 }
 
 function saveCurrentNote() {
-    if (!currentId) return;
-    try {
-        const note = notes.find(n => n.id === currentId);
-        if (!note) return;
-        note.title = editorTitle.value.trim();
-        note.sub = editorSub.value.trim();
-        note.body = editorBody.innerHTML.trim() || '';
-        note.updatedAt = Date.now();
-        saveNotes(notes);
-        renderList();
-    } catch (e) {
-        console.warn('自动保存失败:', e);
-    }
+  if (!activeNoteId) return;
+  const noteIndex = notes.findIndex(n => n.id === activeNoteId);
+  if (noteIndex === -1) return;
+
+  const htmlContent = editor.innerHTML;
+  
+  // 取得純文字用於縮圖標題與預覽
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  const textContent = tempDiv.textContent || tempDiv.innerText || "";
+  
+  // 將第一行設為標題
+  const lines = textContent.trim().split('\n');
+  const title = lines[0] ? lines[0].substring(0, 30) : '新備忘錄';
+
+  notes[noteIndex].title = title;
+  notes[noteIndex].content = textContent;
+  notes[noteIndex].htmlContent = htmlContent;
+  notes[noteIndex].updatedAt = Date.now();
+
+  saveNotesToStorage();
 }
 
-function autoSave() {
-    if (isEditing && currentId) {
-        saveCurrentNote();
-    }
+function deleteActiveNote() {
+  if (!activeNoteId) return;
+  notes = notes.filter(n => n.id !== activeNoteId);
+  saveNotesToStorage();
+  backToList();
 }
 
-// 输入自动保存
-editorTitle.addEventListener('input', autoSave);
-editorSub.addEventListener('input', autoSave);
-editorBody.addEventListener('input', autoSave);
-
-// ============================================================
-//  视图切换（带滑动动画）
-// ============================================================
-function switchView(view) {
-    try {
-        if (view === 'list') {
-            listView.classList.add('active');
-            editorView.classList.remove('active');
-            editorView.classList.remove('slide-in');
-            void editorView.offsetWidth;
-            editorView.classList.add('slide-in');
-            if (isEditing) {
-                autoSave();
-                isEditing = false;
-                currentId = null;
-            }
-            renderList();
-        } else {
-            listView.classList.remove('active');
-            editorView.classList.add('active');
-            editorView.classList.remove('slide-in');
-            void editorView.offsetWidth;
-            editorView.classList.add('slide-in');
-        }
-    } catch (e) {
-        console.error('视图切换失败:', e);
-    }
+// --- iOS 樣式格式化功能 ---
+function executeFormat(command, value = null) {
+  document.execCommand(command, false, value);
+  editor.focus();
 }
 
-// ============================================================
-//  导航事件
-// ============================================================
-btnBack.addEventListener('click', () => switchView('list'));
+// --- 長圖導出功能 ---
+function exportAsLongImage() {
+  const container = document.getElementById('note-editor-container');
+  
+  // 建立一個臨時白底容器，以確保導出的圖片乾淨美觀
+  const clone = container.cloneNode(true);
+  clone.style.width = '390px'; // 模擬 iPhone 寬度
+  clone.style.position = 'fixed';
+  clone.style.top = '-9999px';
+  clone.style.left = '-9999px';
+  clone.style.background = '#ffffff'; // 高質感白底
+  clone.style.color = '#000000';      // 黑字
+  clone.style.height = 'auto';
+  clone.style.padding = '30px';
+  
+  // 調整克隆內部文字顏色以配適白底
+  const noteDate = clone.querySelector('.note-date');
+  if (noteDate) noteDate.style.color = '#8e8e93';
+  const textEditor = clone.querySelector('#editor');
+  if (textEditor) {
+    textEditor.style.color = '#000000';
+    textEditor.style.caretColor = '#ff9f0a';
+  }
 
-btnNewNote.addEventListener('click', () => {
-    try {
-        const note = createNote('', '', '');
-        notes.push(note);
-        saveNotes(notes);
-        renderList();
-        openNote(note.id);
-    } catch (e) {
-        console.error('新增失败:', e);
-        showToast('新增失敗，請查看控制台');
-    }
-});
+  document.body.appendChild(clone);
 
-btnDeleteNote.addEventListener('click', () => {
-    if (!currentId) return;
-    if (confirm('確定要刪除這篇備忘錄嗎？')) {
-        notes = notes.filter(n => n.id !== currentId);
-        saveNotes(notes);
-        renderList();
-        switchView('list');
-        showToast('已刪除');
-    }
-});
-
-// ============================================================
-//  搜索
-// ============================================================
-searchInput.addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    renderList();
-});
-
-// ============================================================
-//  插入图片
-// ============================================================
-btnInsertImage.addEventListener('click', () => imageInput.click());
-
-imageInput.addEventListener('change', (e) => {
-    const files = e.target.files;
-    if (!files.length) return;
-    for (const file of files) {
-        if (!file.type.startsWith('image/')) continue;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            insertImageAtCursor(ev.target.result);
-            autoSave();
-        };
-        reader.readAsDataURL(file);
-    }
-    imageInput.value = '';
-});
-
-function insertImageAtCursor(dataUrl) {
-    const sel = window.getSelection();
-    let range;
-    if (sel.rangeCount > 0) {
-        range = sel.getRangeAt(0);
-    } else {
-        range = document.createRange();
-        range.setStart(editorBody, 0);
-        range.collapse(true);
-    }
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    img.alt = '圖片';
-    img.style.maxWidth = '100%';
-    img.style.borderRadius = '10px';
-    img.style.margin = '8px 0';
-    range.insertNode(img);
-    range.setStartAfter(img);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    editorBody.dispatchEvent(new Event('input'));
-}
-
-// ============================================================
-//  格式工具栏
-// ============================================================
-function updateToolbarState() {
-    try {
-        document.querySelectorAll('[data-cmd]').forEach(btn => {
-            const cmd = btn.dataset.cmd;
-            let active = false;
-            if (cmd === 'bold') active = document.queryCommandState('bold');
-            else if (cmd === 'italic') active = document.queryCommandState('italic');
-            else if (cmd === 'underline') active = document.queryCommandState('underline');
-            else if (cmd === 'strikeThrough') active = document.queryCommandState('strikeThrough');
-            else if (cmd === 'insertUnorderedList') active = document.queryCommandState('insertUnorderedList');
-            else if (cmd === 'insertOrderedList') active = document.queryCommandState('insertOrderedList');
-            else if (cmd === 'formatBlock') {
-                const val = btn.dataset.value;
-                const block = document.queryCommandValue('formatBlock') || '';
-                active = block.toLowerCase() === val.toLowerCase();
-            }
-            btn.classList.toggle('active', !!active);
-        });
-    } catch (e) { /* ignore */ }
-}
-
-document.querySelectorAll('[data-cmd]').forEach(btn => {
-    btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const cmd = btn.dataset.cmd;
-        const val = btn.dataset.value || null;
-        try {
-            if (cmd === 'formatBlock') {
-                document.execCommand('formatBlock', false, val);
-            } else if (cmd === 'removeFormat') {
-                document.execCommand('removeFormat', false, null);
-            } else {
-                document.execCommand(cmd, false, val);
-            }
-        } catch (ex) { /* ignore */ }
-        editorBody.focus();
-        updateToolbarState();
-        autoSave();
+  // 等待圖片載入完畢再進行繪製
+  setTimeout(() => {
+    html2canvas(clone, {
+      useCORS: true,
+      scale: 2, // 提高解析度（視網膜級別）
+      backgroundColor: '#ffffff'
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `備忘錄_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      document.body.removeChild(clone);
+      closeAllSheets();
     });
-});
-
-textColorPicker.addEventListener('input', (e) => {
-    document.execCommand('foreColor', false, e.target.value);
-    editorBody.focus();
-    autoSave();
-});
-
-document.addEventListener('selectionchange', () => {
-    if (isEditing) updateToolbarState();
-});
-
-editorBody.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-        let cmd = null;
-        if (e.key === 'b') cmd = 'bold';
-        else if (e.key === 'i') cmd = 'italic';
-        else if (e.key === 'u') cmd = 'underline';
-        if (cmd) {
-            e.preventDefault();
-            document.execCommand(cmd, false, null);
-            updateToolbarState();
-            autoSave();
-        }
-    }
-});
-
-// ============================================================
-//  导出长图
-// ============================================================
-btnExportImage.addEventListener('click', () => {
-    if (!currentId) return;
-    const note = notes.find(n => n.id === currentId);
-    if (!note) return;
-    if (!note.title && !note.sub && !note.body) {
-        showToast('備忘錄是空的，無法匯出');
-        return;
-    }
-    modalTitle.textContent = '匯出長圖';
-    modalDesc.textContent = '將這篇備忘錄匯出為一張長圖，分享或儲存。';
-    modalConfirm.textContent = '匯出';
-    modalConfirm.disabled = false;
-    modalOverlay.classList.add('active');
-    modalConfirm._note = note;
-});
-
-modalCancel.addEventListener('click', () => modalOverlay.classList.remove('active'));
-modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) modalOverlay.classList.remove('active');
-});
-
-modalConfirm.addEventListener('click', async () => {
-    const note = modalConfirm._note;
-    if (!note) return;
-    modalConfirm.disabled = true;
-    modalConfirm.textContent = '生成中…';
-
-    try {
-        const container = exportContainer;
-        container.innerHTML = '';
-
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'export-title';
-        titleDiv.textContent = safeStr(note.title) || '無標題';
-        container.appendChild(titleDiv);
-
-        if (note.sub) {
-            const subDiv = document.createElement('div');
-            subDiv.className = 'export-sub';
-            subDiv.textContent = safeStr(note.sub);
-            container.appendChild(subDiv);
-        }
-
-        const bodyDiv = document.createElement('div');
-        bodyDiv.className = 'export-body';
-        bodyDiv.innerHTML = safeStr(note.body) || '<p style="color:#8e8e93;">（沒有內容）</p>';
-        container.appendChild(bodyDiv);
-
-        const footer = document.createElement('div');
-        footer.className = 'export-footer';
-        footer.textContent = `備忘錄 · ${new Date(note.updatedAt).toLocaleString('zh-CN')}`;
-        container.appendChild(footer);
-
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-            width: 420,
-        });
-
-        const link = document.createElement('a');
-        link.download = `備忘錄_${safeStr(note.title) || '無標題'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-
-        showToast('匯出成功！');
-        modalOverlay.classList.remove('active');
-    } catch (err) {
-        console.error(err);
-        showToast('匯出失敗，請重試');
-        modalOverlay.classList.remove('active');
-    } finally {
-        modalConfirm.disabled = false;
-        modalConfirm.textContent = '匯出';
-    }
-});
-
-// ============================================================
-//  键盘快捷键
-// ============================================================
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        if (isEditing) {
-            autoSave();
-            showToast('已儲存');
-        }
-    }
-    if (e.key === 'Escape') {
-        if (modalOverlay.classList.contains('active')) {
-            modalOverlay.classList.remove('active');
-        } else if (isEditing) {
-            switchView('list');
-        }
-    }
-});
-
-// ============================================================
-//  粘贴图片
-// ============================================================
-editorBody.addEventListener('paste', (e) => {
-    const items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (const item of items) {
-        if (item.type.startsWith('image/')) {
-            e.preventDefault();
-            const file = item.getAsFile();
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                insertImageAtCursor(ev.target.result);
-                autoSave();
-            };
-            reader.readAsDataURL(file);
-            break;
-        }
-    }
-});
-
-// ============================================================
-//  初始化
-// ============================================================
-renderList();
-
-if (notes.length === 0) {
-    const welcome = createNote(
-        '歡迎使用備忘錄',
-        '開始記錄你的想法',
-        '<p>這是一個功能完整的 PWA 備忘錄。</p><p>✨ 支援 <strong>粗體</strong>、<em>斜體</em>、<u>底線</u></p><p>📷 可插入圖片</p><p>🖼️ 可匯出長圖</p><p style="color:#8e8e93;">試試看吧！</p>'
-    );
-    notes.push(welcome);
-    saveNotes(notes);
-    renderList();
+  }, 300);
 }
 
-// 定时自动保存
-setInterval(() => {
-    if (isEditing) autoSave();
-}, 3000);
+// --- 數據導入與導出 (JSON 備份) ---
+function exportData() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(notes));
+  const dlAnchorElem = document.createElement('a');
+  dlAnchorElem.setAttribute("href", dataStr);
+  dlAnchorElem.setAttribute("download", `iOS_Notes_Backup_${Date.now()}.json`);
+  dlAnchorElem.click();
+  closeAllSheets();
+}
 
-window.addEventListener('beforeunload', () => {
-    if (isEditing) autoSave();
-});
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-console.log('📝 备忘录 PWA (iOS 风格) 已启动');
-console.log(`📄 共 ${notes.length} 篇备忘录`);
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const importedNotes = JSON.parse(event.target.result);
+      if (Array.isArray(importedNotes)) {
+        notes = importedNotes;
+        saveNotesToStorage();
+        alert('備忘錄數據導入成功！');
+      } else {
+        alert('無效的數據格式！');
+      }
+    } catch (err) {
+      alert('讀取檔案失敗！');
+    }
+    closeAllSheets();
+  };
+  reader.readAsText(file);
+}
+
+// --- 彈出層操作 (Bottom Sheets) ---
+function openSheet(sheet) {
+  overlay.classList.add('active');
+  sheet.classList.add('open');
+}
+
+function closeAllSheets() {
+  overlay.classList.remove('active');
+  formatSheet.classList.remove('open');
+  settingsSheet.classList.remove('open');
+  shareSheet.classList.remove('open');
+}
+
+// --- 事件綁定 ---
+function setupEventListeners() {
+  // 路由與主流程
+  document.getElementById('new-note-btn').addEventListener('click', createNewNote);
+  document.getElementById('back-to-list').addEventListener('click', backToList);
+  document.getElementById('delete-note-btn').addEventListener('click', deleteActiveNote);
+  
+  // 即時保存
+  editor.addEventListener('input', saveCurrentNote);
+
+  // 搜尋功能
+  searchInput.addEventListener('input', (e) => {
+    renderNotesList(e.target.value);
+  });
+
+  // 底欄觸發器
+  document.getElementById('format-btn').addEventListener('click', () => openSheet(formatSheet));
+  document.getElementById('import-export-btn').addEventListener('click', () => openSheet(settingsSheet));
+  document.getElementById('share-btn').addEventListener('click', () => openSheet(shareSheet));
+  
+  overlay.addEventListener('click', closeAllSheets);
+  document.getElementById('close-format').addEventListener('click', closeAllSheets);
+  document.getElementById('close-settings').addEventListener('click', closeAllSheets);
+  document.getElementById('close-share').addEventListener('click', closeAllSheets);
+
+  // 格式化指令
+  document.querySelectorAll('.format-style-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      executeFormat(btn.dataset.command, btn.dataset.value);
+    });
+  });
+  document.querySelectorAll('.format-inline-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      executeFormat(btn.dataset.command);
+    });
+  });
+
+  // 插入圖片
+  const imgBtn = document.getElementById('insert-img-btn');
+  const imgLoader = document.getElementById('image-loader');
+  imgBtn.addEventListener('click', () => imgLoader.click());
+  imgLoader.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const imgHtml = `<img src="${event.target.result}" alt="image"><br>`;
+        executeFormat('insertHTML', imgHtml);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // 數據與導出長圖
+  document.getElementById('export-long-img-btn').addEventListener('click', exportAsLongImage);
+  document.getElementById('export-data-btn').addEventListener('click', exportData);
+  
+  const triggerImport = document.getElementById('trigger-import-btn');
+  const fileInput = document.getElementById('import-file-input');
+  triggerImport.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', importData);
+}
+
+// 運行應用
+init();
