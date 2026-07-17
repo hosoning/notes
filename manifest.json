@@ -3,8 +3,8 @@
   "name": "Notes",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/564/564445.png",
-      "type": "image/png",
+      "src": "/icon/icon-512.webp",
+      "type": "image/webp",
       "sizes": "512x512"
     }
   ],
